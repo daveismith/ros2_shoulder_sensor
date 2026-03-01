@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<library path="ros2_shoulder_sensor">
+  <class name="ros2_shoulder_sensor/MagneticAngleSensor"
+         type="ros2_shoulder_sensor::MagneticAngleSensor"
+         base_class_type="hardware_interface::SystemInterface">
+    <description>Magnetic angle sensor hardware interface exposing joint position state (static configured value).</description>
+  </class>
+</library>

@@ -3,6 +3,6 @@
   <class name="ros2_shoulder_sensor/MagneticAngleSensor"
          type="ros2_shoulder_sensor::MagneticAngleSensor"
          base_class_type="hardware_interface::SystemInterface">
-    <description>Magnetic angle sensor hardware interface exposing joint position state (static configured value).</description>
+    <description>CAN-backed magnetic angle sensor hardware interface exposing per-joint position and temperature states.</description>
   </class>
 </library>

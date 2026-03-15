@@ -8,9 +8,7 @@ namespace ros2_shoulder_sensor
 
 namespace
 {
-constexpr uint32_t kAddressMask = 0x1FU;
-constexpr uint32_t kAddressZero = 0U;
-constexpr double kPi = 3.14159265358979323846;
+constexpr double kPi = M_PI;
 }  // namespace
 
 bool MagneticAngleSensorCore::configure(
@@ -28,12 +26,6 @@ bool MagneticAngleSensorCore::configure(
 
   for (size_t i = 0; i < joint_configs_.size(); ++i) {
     const uint32_t expected_id = expected_can_id_for_node(joint_configs_[i].node_id);
-    if ((expected_id & kAddressMask) != kAddressZero) {
-      if (error_message != nullptr) {
-        *error_message = "Only CAN address 0 is supported";
-      }
-      return false;
-    }
 
     const auto inserted = id_to_joint_index_.emplace(expected_id, i);
     if (!inserted.second) {
@@ -79,6 +71,10 @@ bool MagneticAngleSensorCore::process_frame(
   const size_t joint_index = it->second;
   const auto & config = joint_configs_[joint_index];
   auto & state = runtime_[joint_index];
+
+  if (diagnostic_message != nullptr) {
+    diagnostic_message->clear();
+  }
 
   if (state.seen) {
     const uint8_t expected_seq = static_cast<uint8_t>(state.last_sequence + 1U);

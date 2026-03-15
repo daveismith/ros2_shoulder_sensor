@@ -1,8 +1,12 @@
 #include "ros2_shoulder_sensor/magnetic_angle_sensor.hpp"
 
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <vector>
+#include <cerrno>
+#include <cstring>
+#include <cstdio>
 
 #include <fcntl.h>
 #include <linux/can.h>
@@ -16,6 +20,8 @@
 
 namespace ros2_shoulder_sensor
 {
+constexpr std::size_t kMaxFramesPerRead = 100U;
+
 MagneticAngleSensor::MagneticAngleSensor()
 {
 }
@@ -178,7 +184,8 @@ hardware_interface::return_type MagneticAngleSensor::read(
   }
 
   std::string diagnostic_message;
-  while (true) {
+  std::size_t frames_read = 0;
+  while (frames_read < kMaxFramesPerRead) {
     struct can_frame frame {};
     const ssize_t bytes_read = ::recv(can_socket_fd_, &frame, sizeof(frame), 0);
     if (bytes_read < 0) {
@@ -197,6 +204,11 @@ hardware_interface::return_type MagneticAngleSensor::read(
       continue;
     }
 
+    // Skip remote transmission request (RTR) and error frames; only process data frames.
+    if ((frame.can_id & (CAN_RTR_FLAG | CAN_ERR_FLAG)) != 0) {
+      continue;
+    }
+
     MagneticAngleSensorFrame decoded_frame;
     decoded_frame.is_extended = (frame.can_id & CAN_EFF_FLAG) != 0;
     decoded_frame.can_id = decoded_frame.is_extended ?
@@ -211,6 +223,8 @@ hardware_interface::return_type MagneticAngleSensor::read(
     if (consumed && !maybe_diag.empty()) {
       diagnostic_message = maybe_diag;
     }
+
+    ++frames_read;
   }
 
   if (!diagnostic_message.empty()) {

@@ -18,7 +18,10 @@ find_package(rclcpp REQUIRED)
 find_package(pluginlib REQUIRED)
 
 # build library
-add_library(${PROJECT_NAME} src/magnetic_angle_sensor.cpp)
+add_library(${PROJECT_NAME}
+  src/magnetic_angle_sensor.cpp
+  src/magnetic_angle_sensor_core.cpp
+)
 add_library(${PROJECT_NAME}::magnetic_angle_sensor ALIAS ${PROJECT_NAME})
 target_compile_features(${PROJECT_NAME} PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 target_include_directories(${PROJECT_NAME} PUBLIC
@@ -51,6 +54,7 @@ install(
 )
 
 if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights
   # comment the line when a copyright and license is added to all source files
@@ -60,6 +64,16 @@ if(BUILD_TESTING)
   # a copyright and license is added to all source files
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
+
+  ament_add_gtest(test_magnetic_angle_sensor_core
+    test/test_magnetic_angle_sensor_core.cpp
+  )
+  if(TARGET test_magnetic_angle_sensor_core)
+    target_link_libraries(test_magnetic_angle_sensor_core ${PROJECT_NAME})
+    target_include_directories(test_magnetic_angle_sensor_core PUBLIC
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    )
+  endif()
 endif()
 
 ament_export_include_directories(

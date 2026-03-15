@@ -8,7 +8,7 @@ namespace ros2_shoulder_sensor
 
 namespace
 {
-constexpr double kPi = M_PI;
+constexpr double kPi = 3.14159265358979323846;
 }  // namespace
 
 bool MagneticAngleSensorCore::configure(
@@ -121,9 +121,9 @@ bool MagneticAngleSensorCore::compute_states(
     const auto & state = runtime_[i];
 
     if (!state.seen) {
-      const auto startup_elapsed_ms = static_cast<uint32_t>(
-        std::chrono::duration_cast<std::chrono::milliseconds>(now - started_at_).count());
-      if (startup_elapsed_ms > startup_timeout_ms_) {
+      const auto startup_elapsed =
+        std::chrono::duration_cast<std::chrono::milliseconds>(now - started_at_);
+      if (startup_elapsed > std::chrono::milliseconds(startup_timeout_ms_)) {
         if (error_message != nullptr) {
           std::ostringstream oss;
           oss << "No message received for joint '" << config.joint_name
@@ -140,14 +140,14 @@ bool MagneticAngleSensorCore::compute_states(
       continue;
     }
 
-    const auto age_ms = static_cast<uint32_t>(
-      std::chrono::duration_cast<std::chrono::milliseconds>(now - state.last_update).count());
-    if (age_ms > stale_timeout_ms_) {
+    const auto age =
+      std::chrono::duration_cast<std::chrono::milliseconds>(now - state.last_update);
+    if (age > std::chrono::milliseconds(stale_timeout_ms_)) {
       if (error_message != nullptr) {
         std::ostringstream oss;
         oss << "Stale data for joint '" << config.joint_name
             << "' (node " << static_cast<int>(config.node_id)
-            << "): age " << age_ms
+            << "): age " << age.count()
             << " ms exceeds timeout " << stale_timeout_ms_ << " ms";
         *error_message = oss.str();
       }

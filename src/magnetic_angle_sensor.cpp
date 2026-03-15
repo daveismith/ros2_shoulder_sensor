@@ -49,11 +49,25 @@ hardware_interface::CallbackReturn MagneticAngleSensor::on_init(
   const auto startup_it = info.hardware_parameters.find("startup_timeout_ms");
 
   try {
-    stale_timeout_ms_ = stale_it ==
-      info.hardware_parameters.end() ? 200U : std::stoul(stale_it->second);
-    startup_timeout_ms_ =
-      startup_it ==
-      info.hardware_parameters.end() ? stale_timeout_ms_ : std::stoul(startup_it->second);
+    if (stale_it == info.hardware_parameters.end()) {
+      stale_timeout_ms_ = 200U;
+    } else {
+      std::size_t pos = 0;
+      stale_timeout_ms_ = std::stoul(stale_it->second, &pos);
+      if (pos != stale_it->second.size()) {
+        throw std::invalid_argument("stale_timeout_ms contains trailing characters");
+      }
+    }
+
+    if (startup_it == info.hardware_parameters.end()) {
+      startup_timeout_ms_ = stale_timeout_ms_;
+    } else {
+      std::size_t pos = 0;
+      startup_timeout_ms_ = std::stoul(startup_it->second, &pos);
+      if (pos != startup_it->second.size()) {
+        throw std::invalid_argument("startup_timeout_ms contains trailing characters");
+      }
+    }
   } catch (...) {
     RCLCPP_ERROR(
       rclcpp::get_logger("MagneticAngleSensor"),
@@ -82,7 +96,11 @@ hardware_interface::CallbackReturn MagneticAngleSensor::on_init(
     cfg.joint_name = joint.name;
 
     try {
-      const unsigned long parsed_node = std::stoul(node_id_it->second);
+      std::size_t pos = 0;
+      const unsigned long parsed_node = std::stoul(node_id_it->second, &pos);
+      if (pos != node_id_it->second.size()) {
+        throw std::invalid_argument("node_id contains trailing characters");
+      }
       if (parsed_node > 255U) {
         throw std::out_of_range("node_id out of range");
       }
@@ -102,7 +120,12 @@ hardware_interface::CallbackReturn MagneticAngleSensor::on_init(
     const auto offset_it = joint.parameters.find("zero_offset_deg");
     if (offset_it != joint.parameters.end()) {
       try {
-        cfg.zero_offset_deg = std::stod(offset_it->second);
+        std::size_t pos = 0;
+        const double parsed_offset = std::stod(offset_it->second, &pos);
+        if (pos != offset_it->second.size()) {
+          throw std::invalid_argument("zero_offset_deg contains trailing characters");
+        }
+        cfg.zero_offset_deg = parsed_offset;
       } catch (...) {
         RCLCPP_ERROR(
           rclcpp::get_logger("MagneticAngleSensor"),
@@ -189,6 +212,10 @@ hardware_interface::return_type MagneticAngleSensor::read(
     struct can_frame frame {};
     const ssize_t bytes_read = ::recv(can_socket_fd_, &frame, sizeof(frame), 0);
     if (bytes_read < 0) {
+      if (errno == EINTR) {
+        // Interrupted by a signal; retry the read.
+        continue;
+      }
       if (errno == EAGAIN || errno == EWOULDBLOCK) {
         break;
       }
